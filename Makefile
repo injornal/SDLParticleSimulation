@@ -1,9 +1,21 @@
-build-run:
-	g++ src/main.cpp -o play `sdl2-config --cflags --libs` -l SDL2_Image
-	./play
+Q = @
+
+
+all: clean bin/play
+	$(Q)echo 'Building...'
+
+run: all
+	./bin/play
 
 clean:
-	rm play
+	$(Q)echo "Cleanining...."
+	$(Q)rm -rf ./bin/*
+	$(Q)echo "Done"
 
 
-.PHONY: clean build-run
+bin/play:
+	$(Q)echo "g++ src/main.cpp -o ./bin/play `sdl2-config --cflags --libs` -l SDL2_Image"
+	$(Q)g++ src/main.cpp -o ./bin/play `sdl2-config --cflags --libs` -l SDL2_Image
+
+
+.PHONY: clean run all

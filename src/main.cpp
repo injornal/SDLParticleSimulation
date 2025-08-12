@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -17,6 +18,18 @@ struct vec2 {
     float x;
     float y;
     vec2(float x, float y) : x(x), y(y) {};
+
+    vec2 lnormal() { return vec2(-y, x); }
+    vec2 rnormal() { return vec2(y, -x); }
+
+    vec2 rotate(float angle) {
+        return vec2(this->x * cos(angle) + this->y * -sin(angle),
+                    this->x * sin(angle) + this->y * cos(angle));
+    }
+
+    const float operator*(const vec2 &rhv) {
+        return this->x * rhv.x + this->y * rhv.y;
+    }
 };
 
 class Circle {
@@ -34,7 +47,7 @@ class Circle {
         this->rect.w = 2 * r;
         this->rect.h = 2 * r;
         this->radius = r;
-        this->gravity = 0.5;
+        this->gravity = 0.1;
         this->texture = IMG_LoadTexture(renderer, "textures/circle.png");
     }
 
@@ -48,6 +61,12 @@ class Circle {
                              circle->rect.y - this->rect.y);
             float dist = std::sqrt(pow(diff.x, 2) + pow(diff.y, 2));
             if (dist < circle->radius + this->radius) {
+                if (dist == 0) {
+                    this->rect.x += this->radius + circle->radius;
+                    return;
+                }
+
+                assert(dist != 0);
                 diff.x /= dist;
                 diff.y /= dist;
 
@@ -57,7 +76,15 @@ class Circle {
                 this->rect.x -= diff.x * (2 * this->radius - dist) / 2;
                 this->rect.y -= diff.y * (2 * this->radius - dist) / 2;
 
-                std::swap(this->velocity, circle->velocity);
+                float angle = acos(diff.x);
+                if (diff.y < 0) angle = -angle;
+
+                vec2 transformedThisVelocity = this->velocity.rotate(angle);
+                vec2 transformedCircleVelocity = circle->velocity.rotate(angle);
+                std::swap(transformedThisVelocity.x,
+                          transformedCircleVelocity.x);
+                this->velocity = transformedThisVelocity.rotate(-angle);
+                circle->velocity = transformedCircleVelocity.rotate(-angle);
             }
         }
 
@@ -111,11 +138,13 @@ int main() {
     }
 
     std::vector<Circle> circles;
-    int n = 30;
+    int n = 5;
     for (int i = 0; i < n; i++) {
         circles.push_back(Circle(10 + i * (SCREEN_WIDTH - 20) / n,
-                                 10 + rand() % 200, i, renderer));
+                                 10 + rand() % 200, 50, renderer));
     }
+    // circles.push_back(Circle(100, 100, 50, renderer));
+    // circles.push_back(Circle(300, 100, 50, renderer));
     while (true) {
         SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
         SDL_RenderClear(renderer);
